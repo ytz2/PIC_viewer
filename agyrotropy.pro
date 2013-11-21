@@ -12,30 +12,48 @@
 ;
 ; CALLING SEQUENCE:
 ;       finite_diff,specie,step
-
+; IPUT: specie: e,i,o
+;       step: time step
+;       smth: gaussian filter number (opitonal), if not set, no filter
+;       ave:  use the time-averaged data to calculate
 ; SIDE EFFECTS:
 ;       no matter how small the domain is, it always load the whole dataset
 ;
 ; MODIFICATION HISTORY:
 ;       Written by:  Yanhua Liu (yhliu@atlas.sr.unh.edu)
 
-FUNCTION AGYROTROPY,SPECIE,STEP
+FUNCTION AGYROTROPY,SPECIE,STEP,smth=smth,fsmth=fsmth,ave=ave,
 
+aver=''
+if keyword_set(ave) then aver='-ave'
 ;-----------------------------------------
 ; Prepare for quantities
 ;-----------------------------------------
-bx= GAUSS_SMOOTH(get_quantity('bx',step),5)
-by= GAUSS_SMOOTH(get_quantity('by',step),5)
-bz= GAUSS_SMOOTH(get_quantity('bz',step),5)
-pxx= GAUSS_SMOOTH(get_quantity('p'+specie+'-xx',step),5)
-pxy= GAUSS_SMOOTH(get_quantity('p'+specie+'-xy',step),5)
-pxz= GAUSS_SMOOTH(get_quantity('p'+specie+'-xz',step),5)
-pyy= GAUSS_SMOOTH(get_quantity('p'+specie+'-yy',step),5)
-pyz= GAUSS_SMOOTH(get_quantity('p'+specie+'-yz',step),5)
-pzz= GAUSS_SMOOTH(get_quantity('p'+specie+'-zz',step),5)
-pyx=pxy  ;get_quantity('p'+specie+'-yx',step)
-pzx=pxz  ;get_quantity('p'+specie+'-zx',step)
-pzy=pyz  ;get_quantity('p'+specie+'-zy',step)
+bx=get_quantity('bx'+aver,step)
+by=get_quantity('by'+aver,step)
+bz=get_quantity('bz'+aver,step)
+pxx=get_quantity('p'+specie+'-xx'+aver,step)
+pxy=get_quantity('p'+specie+'-xy'+aver,step)
+pxz=get_quantity('p'+specie+'-xz'+aver,step)
+pyy=get_quantity('p'+specie+'-yy'+aver,step)
+pzz=get_quantity('p'+specie+'-zz'+aver,step)
+pyz=get_quantity('p'+specie+'-yz'+aver,step)
+if keyword_set(smth) then begin
+   bx= GAUSS_SMOOTH(bx,smth,/nan)
+   by= GAUSS_SMOOTH(by,smth,/nan)
+   bz= GAUSS_SMOOTH(bz,smth,/nan)
+   pxx= GAUSS_SMOOTH(pxx,smth,/nan)
+   pxy= GAUSS_SMOOTH(pxy,smth,/nan)
+   pxz= GAUSS_SMOOTH(pxz,smth,/nan)
+   pyy= GAUSS_SMOOTH(pyy,smth,/nan)
+   pyz= GAUSS_SMOOTH(pyz,smth,/nan)
+   pzz= GAUSS_SMOOTH(pzz,smth,/nan)
+endif
+
+;symetirc tensors
+pyx=pxy 
+pzx=pxz 
+pzy=pyz 
 ;-----------------------------------------
 ; Scutter 2008 A2
 ;-----------------------------------------
@@ -55,6 +73,9 @@ beta=-(nxy^2+nxz^2+nyz^2-nxx*nyy-nxx*nzz-nyy*nzz)
 ; Scutter 2008 A5
 ;-----------------------------------------
 A=2.*sqrt(alpha^2-4*beta)/alpha
+
+if keyword_set(fsmth) then $
+   A=gauss_smooth(A,fsmth,/nan)
 
 return,A
 END

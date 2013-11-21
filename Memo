@@ -1,0 +1,25 @@
+
+Three demos:
+plot_data.pro 
+plot_bycut.pro
+save_demo.pro 
+They teaches how to use the utitlity
+
+Utilities:
+
+opengda.pro (step) : open all the gda files with given step
+
+
+plot_contour.pro, plot the contour of given quantity and step, it can also overplot the contour plot, and output the data at given dimention.
+
+plot_contour_data.pro. difference is it accept the data, but not the quantity name
+
+linespace.pro (dim=dim,/x,/y) ,/x indicate the xarr ticks, /y yarr ticks
+
+map_data.pro      xcut= xcut, gives the cut along xcut, need linespace(/y) to do line plot. etc.
+
+orbit_click    click to get the path
+
+simulate_observe click to get the path and save data to tplot
+
+others...

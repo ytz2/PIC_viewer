@@ -10,7 +10,6 @@
 ;
 ;
 ; INPUTS:
-;       indata: data processed but keep the format as got by get_quantity.pro
 ;       product: quantity
 ;       step: time step
 ; Option Input:
@@ -18,42 +17,40 @@
 ;       bar_low: color bar lower limit
 ;       bar_up: color bar upper limit (set with bar_low)
 ;       dat: return the data at give dim
-;       ay:  if set, overplot ay
+;       over_contour: quantity to make contour plot
+;       xcut: mark one cut at x=xcut
+;       zcut: mark one cut at z=zcut
 ;       print: /print to output ps file
-;       multi: /multi to make multiplot enabled
 ; MODIFICATION HISTORY:
 ;       Written by:  Yanhua Liu (yhliu@atlas.sr.unh.edu), May 2012.
 ;Note: it will not check if the given coordinate is out of bound
-;       Edited by: Yanhua Liu Nov 2012
-;       Remove the over_contour keyword and replace with ay keyword
+
 
 PRO PLOT_CONTOUR $
-   ,product $  
+   ,product $
    ,step $
-   ,indata=indata $
    ,dim=dim $
    ,bar_low=bar_low $
    ,bar_up=bar_up $
    ,dat=dat $
-   ,ay=ay $ 
-   ,print=print $
-   ,multi=multi $
-   ,zcut=zcut
+   ,over_contour=over_contour $
+   ,over_log=over_log $
+   ,xcut=xcut $
+   ,zcut=zcut $
+   ,print=print
+  
+
+
+
 common choice, plotme
 common parameters,nx,nz,tslices,xmax,zmax,zcenter,numq,tindices,directory
 common colortable,rgb,usecolor,red,blue,green,range1,range2,r1,r2,tmax,tmin
 common controlplot,v
 
-if n_elements(indata) eq 0 then begin
-   fulldata=get_quantity(product,step)
-endif else begin
-   fulldata=indata
-endelse
+fulldata=get_quantity(product,step)
 
-csize=1.5
-if keyword_set(print) then csize=1.
 
-v={xmin:0.0,xmax:xmax,zmin:-1.*zcenter,zmax:zcenter,smoothing:1,contours:14}
+v={xmin:0.0,xmax:xmax,zmin:-1.*zcenter,zmax:zcenter,smoothing:1,contours:24}
 
 if (n_elements(dim) ne 0) then begin
     v.xmin=dim[0]
@@ -61,8 +58,6 @@ if (n_elements(dim) ne 0) then begin
     v.zmin=dim[2]
     v.zmax=dim[3]
 endif
-
-
 
 xoff = 0.09
 yoff = 0.11
@@ -93,7 +88,7 @@ if arg_present(dat) then $
 
 ; Output info about data
 
-;print,'Maximum Value=',max(abs(temp))
+print,'Maximum Value=',max(abs(temp))
 
 ; Smooth the temp
 
@@ -121,52 +116,27 @@ endif
 !y.style=1
 !p.color =1
 !p.background=0
-!x.title="x/d!le!n"
-!y.title="z/d!le!n"
+!x.title="x"
+!y.title="z"
 
+!p.position=[xoff,yoff,xpic,ypic] 
 
-
-if not keyword_set(print) and !p.multi[0] eq 0 then $
+if not keyword_set(print) then $
    window,!D.WINDOW +1,xsize=1200,ysize=800
 
+shade_surf, temp, xarr, zarr, ax=90,az=0,shades=bytscl(temp,max=r2,min=r1),zstyle=4,charsize=1.5,pixels=1000
+ xyouts,v.xmin+(v.xmax-v.xmin)/3.5,(v.zmax)*1.02,product+'  step='+strcompress(string(step)),charsize=2.0
 
-
-
-name=product+' step='+strcompress(string(step))
-
-;!p.position=[xoff,yoff,xpic,ypic] 
-position=[xoff,yoff,xpic,ypic] 
-if keyword_set(print) and not keyword_set(multi) then $
-   postion=[xoff+0.05,yoff,xpic-0.08,ypic]
-
-if keyword_set(multi) then begin
-   Plot, Findgen(11), Color=!P.Background,/noerase
-   x1 = !X.Region[0] + 0.05
-   x2 = !X.Region[1] - 0.12
-   y1 = !Y.Region[0] + 0.02
-   y2 = !Y.Region[1] - 0.02
-   position=[x1,y1,x2,y2]
-endif
-
-shade_surf, temp, xarr, zarr, ax=90,az=0,shades=bytscl(temp,max=r2,min=r1),zstyle=4,charsize=csize,pixels=1000,position=position
-if not keyword_set(multi) then $
-   xyouts,v.xmin+(v.xmax-v.xmin)/3.5,(v.zmax)*1.02,name,charsize=csize+0.5
 !x.title=""
 !y.title=""
 
-name=''
-if keyword_set(multi) then name=product&fit=1
+colorbar, Position = [xpic+dx1,yoff,xpic+dx2,ypic], /Vertical, $
+          Range=[r1,r2], Format='(f6.2)', /Right, $
+          Bottom=5, ncolors=251, Divisions=6, font=9, charsize=1.5
 
-;[xpic+dx1,yoff,xpic+dx2,ypic]
-
-if keyword_set(multi) then xpic=0.85
-
-cgcolorbar, Position = [xpic+dx1/2,yoff,xpic+dx2/2,ypic], /Vertical, $
-          Range=[r1,r2], Format='(f8.2)', /right, $
-          Bottom=5, ncolors=251, Divisions=6, font=9, charsize=csize,fit=fit,title=name
-
-if keyword_set(ay) then begin
-   temp2=get_quantity('ay',step)
+if n_elements(over_contour) ne 0 then begin
+   temp2=get_quantity(over_contour,step)
+   if keyword_set(over_log) then temp2=alog10(temp2)
    if n_elements(dim) ne 0 then $
       temp2 = temp2(imin:imax,jmin:jmax)
    temp2 = smooth(temp2,v.smoothing,/nan)
@@ -176,13 +146,16 @@ if keyword_set(ay) then begin
    tmin=tmin-dr/2
    tmax=tmax+dr/2
    tstep=(tmax-tmin)/v.contours
-   clevels=indgen(v.contours)*tstep + tmin       
+   clevels=indgen(v.contours)*tstep + tmin
+   if keyword_set(over_log) then clevels=scale_vector(findgen(12),tmin+1,tmax)
    contour,temp2,xarr,zarr,levels=clevels,/overplot,color=250
-
 endif
 
-if n_elements(zcut) ne 0 then oplot,[0,2500],[0,0],color=0
+if n_elements(xcut) ne 0 then $
+   oplot,[xcut,xcut],[-1e4,1e4]
 
+if n_elements(zcut) ne 0 then $
+   oplot,[-1e4,1e4], [zcut,zcut]
 
 
 END
